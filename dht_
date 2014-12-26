@@ -1,0 +1,104 @@
+#!/usr/bin/python
+# vim: set fileencoding=utf-8 :
+#
+# Copyright 2014 Guido Guenther <agx@sigxcpu.org>
+#
+# Licesnse: GPLv3
+#
+# A munin plugin to measure temperature and humidity
+#
+#%# capabilities=autoconf
+#%# family=contrib
+
+import os
+import sys
+import math
+
+# Useful to run from within the source tree
+exe = os.path.abspath(os.path.dirname(os.path.realpath(sys.argv[0])))
+dev_path='%s/Adafruit_Python_DHT/build/lib.linux-armv6l-2.7/' % (exe, )
+if os.path.exists(dev_path):
+    sys.path.insert(0, dev_path)
+
+import Adafruit_DHT
+
+sensortype = os.getenv('sensor', 'AM2302')
+pin = os.getenv('pin', 4)
+
+def print_config():
+    where = os.getenv('where')
+    if where is None:
+        where = sys.argv[0].split('_', 1)[1]
+    print """graph_title Humidity and Temperature in %(where)s
+graph_category heating
+graph_info Show temperature, humidity and dewpoint in %(where)s using a %(sensortype)s
+temp.label Temperature
+temp.type GAUGE
+temp.max 100
+temp.min -50
+hum.label Humidity
+hum.type GAUGE
+hum.max 100
+hum.min 0
+hum.critical 60
+hum.warning 50
+dp.label Dewpoint
+dp.type GAUGE
+""" % dict(sensortype=sensortype, where=where)
+
+K2 = 17.5043
+K3 = 241.2
+
+def calc_dewpoint(temp, hum):
+    """
+    See https://de.wikipedia.org/wiki/Taupunkt
+
+    >>> calc_dewpoint(20, 100)
+    20.0
+    """
+    phi = hum / 100.0
+    theta = temp
+
+    lnphi = math.log(phi)
+    z = ((K2 * theta) /  (K3 + theta)) + lnphi
+    n = ((K2 * K3) / (K3 + theta)) - lnphi
+
+    return K3 * (z/n)
+    
+
+def fetch_values():
+    sensor = eval('Adafruit_DHT.' + sensortype)
+    hum, temp = Adafruit_DHT.read_retry(sensor, pin)
+
+    dp = calc_dewpoint(temp, hum)
+    print "temp.value %f" % temp
+    print "hum.value %f" % hum
+    print "dp.value %f" % dp
+
+
+def main(args):
+    if len(args) > 1:
+        if args[1] in [ 'autoconf', 'detect' ]:
+            try:
+                fetch_raw()
+                print "yes"
+                return 0
+            except:
+                print "no"
+                return 1
+        elif args[1] == 'config':
+            try:
+                print_config()
+            except Exception as e:
+                print >>sys.stderr, "Failed to fetch config: '%s'" % e
+                return 1
+            return 0
+    try:
+        fetch_values()
+    except Exception as e:
+        print >>sys.stderr, "Failed to fetch values: '%s'" % e
+        return 1
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
