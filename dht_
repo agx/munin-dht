@@ -13,10 +13,12 @@
 import os
 import sys
 import math
+import platform
 
 # Useful to run from within the source tree
 exe = os.path.abspath(os.path.dirname(os.path.realpath(sys.argv[0])))
-dev_path='%s/Adafruit_Python_DHT/build/lib.linux-armv6l-2.7/' % (exe, )
+dev_path='%s/Adafruit_Python_DHT/build/lib.linux-%s-2.7/' % (exe,
+                                                             platform.machine())
 if os.path.exists(dev_path):
     sys.path.insert(0, dev_path)
 
