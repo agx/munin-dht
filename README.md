@@ -6,7 +6,7 @@ dirty work. Therefore it doesn't need any external binary callouts.
 
 To build an run from the source tree just do a:
 
-    sudo apt-get install python-setuptools git build-essential
+    sudo apt-get install python-setuptools python-dev git build-essential
     git clone git://honk.sigxcpu.org/git/munin-dht.git
     make
 
